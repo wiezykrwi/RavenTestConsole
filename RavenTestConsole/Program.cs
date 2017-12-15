@@ -25,25 +25,48 @@ namespace RavenTestConsole
                 store.Initialize();
                 store.ExecuteIndex(new PersonWithPetsAndAgeIndex());
 
-                Thread.Sleep(5000); // wait for index
+                Thread.Sleep(2000); // wait for index
 
                 using (var session = store.OpenSession())
                 {
                     session.Store(pastis, "Pet/1");
                     session.Store(fluffy, "Pet/2");
-                    session.Store(john);
-                    session.Store(mathia);
+                    session.Store(john, "Person/1");
+                    session.Store(mathia, "Person/2");
 
                     session.SaveChanges();
                 }
+                Thread.Sleep(2000); // wait for index
 
                 // This query execution does not give me the stored index json but the actual Person docs => results in not mapped properties
                 using (var session = store.OpenSession())
                 {
                     var q = session.Query<PersonWithPetsAndAgeIndex.Result, PersonWithPetsAndAgeIndex>()
                         .Where(r => r.PetAge > 3);
+                    // q = {FROM INDEX 'PersonWithPetsAndAgeIndex' WHERE PetAge > $p0} 
+                    // in raven studio using this and setting take fields from index gives me the correct json
                     var
-                        res = q
+                        res = q 
+                            .ToList(); // how can I get a list of PersonWithPetsAndAgeIndex.Result with all properties filled in
+                    
+                }
+
+                // This query gives me the expected result, but is very hacky
+                using (var session = store.OpenSession())
+                {
+                    var q = session.Query<PersonWithPetsAndAgeIndex.Result, PersonWithPetsAndAgeIndex>() // need to query on the projected type to use the PetAge prop 
+                        .Where(r => r.PetAge > 3)
+                        .ProjectInto<Person>()
+                        .Select(person => new PersonWithPetsAndAgeIndex.Result
+                        {
+                            PetAge = session.Load<Pet>(person.Pet).Age,
+                            PetName = session.Load<Pet>(person.Pet).Name,
+                            PersonName = person.Name
+                        });
+                    // q = {FROM INDEX 'PersonWithPetsAndAgeIndex' as person WHERE person.PetAge > $p0 SELECT { PetAge : load(person.Pet).Age, PetName : load(person.Pet).Name, PersonName : person.Name }}
+                    // Same output as the above, but why should I do this complex mapping if the index has already done this? (I Cannot convince my co-workers to do it like this, and I don't blame them. ) 
+                    var
+                        res = q 
                             .ToList(); // how can I get a list of PersonWithPetsAndAgeIndex.Result with all properties filled in
                 }
             }
