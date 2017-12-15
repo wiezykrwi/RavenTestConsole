@@ -37,7 +37,7 @@ namespace RavenTestConsole
                     session.SaveChanges();
                 }
 
-                // This query execution crashes
+                // This query execution does not give me the stored index json but the actual Person docs => results in not mapped properties
                 using (var session = store.OpenSession())
                 {
                     var q = session.Query<PersonWithPetsAndAgeIndex.Result, PersonWithPetsAndAgeIndex>()
