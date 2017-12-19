@@ -13,7 +13,7 @@ namespace TryToCrash
         {
             _store = new DocumentStore
             {
-                Urls = new[] { "http://localhost:8080/" },
+                Urls = new[] {"http://localhost:8080/"},
                 Database = "trytocrash"
             };
             _store.Initialize();
@@ -21,7 +21,7 @@ namespace TryToCrash
             var tasks = new List<Task>();
             for (int i = 0; i < 100000; i++)
             {
-               tasks.Add(Store(new SomeObject {Idke = i, FieldProperty = $"Field{i}"}));
+                tasks.Add(Store(new SomeObject {Idke = i, FieldProperty = $"Field{i}"}));
             }
 
             try
@@ -33,21 +33,45 @@ namespace TryToCrash
             catch (Exception e)
             {
                 Console.WriteLine(e);
-               
+            }
+            finally
+            {
+                _store.Dispose();
             }
         }
 
         private static async Task Store(ISomeObject o)
         {
             await Task.Yield();
+
+            using (var session = _store.OpenSession())
+            {
+                await Task.Delay(1000);
+                session.Store(o);
+                session.SaveChanges();
+            }
+        }
+
+        private static async Task StoreAsyncSession(ISomeObject o)
+        {
+            await Task.Yield();
+
             using (var session = _store.OpenAsyncSession())
             {
-                var id = $"{o.GetType().Name}/{o.Idke}";
                 await session.StoreAsync(o);
                 await session.SaveChangesAsync();
             }
         }
+    }
 
+    internal interface ISomeObject
+    {
+        int Idke { get; set; }
+    }
 
+    class SomeObject : ISomeObject
+    {
+        public int Idke { get; set; }
+        public string FieldProperty { get; set; }
     }
 }
