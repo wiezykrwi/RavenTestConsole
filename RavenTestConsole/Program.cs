@@ -42,11 +42,16 @@ namespace RavenTestConsole
                 using (var session = store.OpenSession())
                 {
                     var q = session.Query<PersonWithPetsAndAgeIndex.Result, PersonWithPetsAndAgeIndex>()
-                        .Where(r => r.PetAge > 3);
+                        .Where(r => r.PetAge > 3)
+                        .ProjectInto<PersonWithPetsAndAgeIndex.Result>();
                     // q = {FROM INDEX 'PersonWithPetsAndAgeIndex' WHERE PetAge > $p0} 
                     // in raven studio using this and setting take fields from index gives me the correct json
+                    q = q.Customize(x => x.AfterQueryExecuted(y =>
+                    {
+                        var bla = y;
+                    }));
                     var
-                        res = q 
+                        res = q
                             .ToList(); // how can I get a list of PersonWithPetsAndAgeIndex.Result with all properties filled in
                     
                 }
