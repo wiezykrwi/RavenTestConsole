@@ -1,8 +1,14 @@
-﻿using System.Linq;
-using System.Threading;
+﻿using System;
+using System.Collections;
+using System.Collections.Generic;
+using System.Linq;
+using System.Linq.Expressions;
+using System.Threading.Tasks;
+using Raven.Client;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Linq;
+using Raven.Client.Documents.Operations.Indexes;
 
 namespace RavenTestConsole
 {
@@ -16,95 +22,126 @@ namespace RavenTestConsole
             var pastis = new Pet {Name = "Pastis", Age = 4};
             var mathia = new Person {Name = "Mathia", Pet = "Pet/1"};
 
-            using (var store = new DocumentStore
+
+            var database = new RavenDatabase();
+
+            using (var session = database.GetSession())
             {
-                Urls = new[] {"http://localhost:8080/"},
-                Database = "zoo"
-            })
+                session.Store(pastis, "Pet/1");
+                session.Store(fluffy, "Pet/2");
+                session.Store(john, "Person/1");
+                session.Store(mathia, "Person/2");
+
+                session.SaveChanges();
+            }
+
+            var query = new QueryPersonWithPetsYoungerThan(database);
+
+            query.DefineQuery();
+
+            query.Prepare(age: 5);
+
+            var result = query.Execute().Result;
+        }
+
+        class QueryPersonWithPetsYoungerThan : RavenDbQuery<Person, PersonWithPetsAndAge>, IGetPersonWithPetsYoungerThan
+        {
+            public override Expression<Func<IEnumerable<Person>, IEnumerable>> Index()
             {
-                store.Initialize();
-                store.ExecuteIndex(new PersonWithPetsAndAgeIndex());
+                return people => from person in people
+                    let pet = LoadDocument<Pet>(person.Pet)
+                    select new PersonWithPetsAndAge {PersonName = person.Name, PetName = pet.Name, PetAge = pet.Age};
+            }
 
-                Thread.Sleep(2000); // wait for index
+            public void Prepare(int age)
+            {
+                Where(x => x.PetAge < age);
+            }
 
-                using (var session = store.OpenSession())
+            public QueryPersonWithPetsYoungerThan(IRavenDatabase db) : base(db)
+            {
+            }
+        }
+
+        internal interface IGetPersonWithPetsYoungerThan : IQuery<PersonWithPetsAndAge>
+        {
+            void Prepare(int age);
+        }
+
+
+        public abstract class RavenDbQuery<TAggregate, TResult> :
+            AbstractCommonApiForIndexes,
+            IQueryDefiner,
+            IQuery<TResult>
+        {
+            private readonly IRavenDatabase _db;
+
+            protected RavenDbQuery(IRavenDatabase db)
+            {
+                _db = db;
+            }
+
+            private readonly List<Expression<Func<TResult, bool>>> _wheres = new List<Expression<Func<TResult, bool>>>();
+
+            public void DefineQuery()
+            {
+                var builder = new IndexDefinitionBuilder<TAggregate>();
+
+                builder.Map = Index();
+                builder.StoresStrings.Add(Constants.Documents.Indexing.Fields.AllFields, FieldStorage.Yes);
+                var indexDefinition = builder.ToIndexDefinition(_db.Store.Conventions);
+                indexDefinition.Name = IndexName;
+               
+                _db.Store.Maintenance.Send(new PutIndexesOperation(indexDefinition));
+
+            }
+
+            public string IndexName => GetType().FullName;
+
+            public abstract Expression<Func<IEnumerable<TAggregate>, IEnumerable>> Index();
+
+            public void Where(Expression<Func<TResult, bool>> predicate)
+            {
+                _wheres.Add(predicate);
+            }
+
+            public async Task<IReadOnlyCollection<TResult>> Execute()
+            {
+                using (var session = _db.GetSession())
                 {
-                    session.Store(pastis, "Pet/1");
-                    session.Store(fluffy, "Pet/2");
-                    session.Store(john, "Person/1");
-                    session.Store(mathia, "Person/2");
-
-                    session.SaveChanges();
-                }
-                Thread.Sleep(2000); // wait for index
-
-                // This query execution does not give me the stored index json but the actual Person docs => results in not mapped properties
-                using (var session = store.OpenSession())
-                {
-                    var q = session.Query<PersonWithPetsAndAgeIndex.Result, PersonWithPetsAndAgeIndex>()
-                        .Where(r => r.PetAge > 3)
-                        .ProjectInto<PersonWithPetsAndAgeIndex.Result>();
-                    // q = {FROM INDEX 'PersonWithPetsAndAgeIndex' WHERE PetAge > $p0} 
-                    // in raven studio using this and setting take fields from index gives me the correct json
-                    q = q.Customize(x => x.AfterQueryExecuted(y =>
+                    IRavenQueryable<TResult> q = session.Query<TResult>(IndexName);
+                    foreach (var where in _wheres)
                     {
-                        var bla = y;
-                    }));
-                    var
-                        res = q
-                            .ToList(); // how can I get a list of PersonWithPetsAndAgeIndex.Result with all properties filled in
-                    
-                }
+                        q = q.Where(where);
+                    }
+                    var result = q.ProjectInto<TResult>().ToList();
 
-                // This query gives me the expected result, but is very hacky
-                using (var session = store.OpenSession())
-                {
-                    var q = session.Query<PersonWithPetsAndAgeIndex.Result, PersonWithPetsAndAgeIndex>() // need to query on the projected type to use the PetAge prop 
-                        .Where(r => r.PetAge > 3)
-                        .ProjectInto<Person>()
-                        .Select(person => new PersonWithPetsAndAgeIndex.Result
-                        {
-                            PetAge = session.Load<Pet>(person.Pet).Age,
-                            PetName = session.Load<Pet>(person.Pet).Name,
-                            PersonName = person.Name
-                        });
-                    // q = {FROM INDEX 'PersonWithPetsAndAgeIndex' as person WHERE person.PetAge > $p0 SELECT { PetAge : load(person.Pet).Age, PetName : load(person.Pet).Name, PersonName : person.Name }}
-                    // Same output as the above, but why should I do this complex mapping if the index has already done this? (I Cannot convince my co-workers to do it like this, and I don't blame them. ) 
-                    var
-                        res = q 
-                            .ToList(); // how can I get a list of PersonWithPetsAndAgeIndex.Result with all properties filled in
+                    var r = await Task.FromResult(result);
+                    return r;
                 }
             }
         }
-    }
 
-    class PersonWithPetsAndAgeIndex : AbstractIndexCreationTask<Person>
-    {
-        public class Result
+        public interface IQueryDefiner
         {
-            public string PersonName { get; set; }
-            public string PetName { get; set; }
-            public int PetAge { get; set; }
+            void DefineQuery();
         }
 
-        public PersonWithPetsAndAgeIndex()
+        public interface IQuery<TResult>
         {
-            Map = people => from person in people
-                let pet = LoadDocument<Pet>(person.Pet)
-                select new Result {PersonName = person.Name, PetName = pet.Name, PetAge = pet.Age};
-            StoreAllFields(FieldStorage.Yes);
+            Task<IReadOnlyCollection<TResult>> Execute();
         }
-    }
 
-    class Person
-    {
-        public string Name { get; set; }
-        public string Pet { get; set; }
-    }
+        class Person
+        {
+            public string Name { get; set; }
+            public string Pet { get; set; }
+        }
 
-    class Pet
-    {
-        public string Name { get; set; }
-        public int Age { get; set; }
+        class Pet
+        {
+            public string Name { get; set; }
+            public int Age { get; set; }
+        }
     }
 }

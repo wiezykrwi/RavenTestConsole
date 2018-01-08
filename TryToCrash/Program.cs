@@ -61,17 +61,24 @@ namespace TryToCrash
             _store.Initialize();
 
             var tasks = new List<Task>();
-            for (int i = 0; i < 100000; i++)
+            for (int y = 0; y < 10000; y++)
             {
-                if (async == "y")
+                Console.WriteLine("Starting new batch");
+                for (int i = 0; i < 8000; i++)
                 {
-                    tasks.Add(StoreAsyncSession(new SomeObject { Idke = i, FieldProperty = $"Field{i}" }));
+                    if (async == "y")
+                    {
+                        tasks.Add(StoreAsyncSession(new SomeObject { Idke = i, FieldProperty = $"Field{i}" }));
+                    }
+                    else
+                    {
+                        tasks.Add(Store(new SomeObject { Idke = i, FieldProperty = $"Field{i}" }));
+                    }
                 }
-                else
-                {
-                    tasks.Add(Store(new SomeObject { Idke = i, FieldProperty = $"Field{i}" }));
-                }
+                Task.WhenAll(tasks).Wait();
+                
             }
+           
 
             try
             {
