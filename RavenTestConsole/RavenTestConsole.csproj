@@ -63,7 +63,7 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="Class1.cs" />
+    <Compile Include="IRavenDatabase.cs" />
     <Compile Include="IPersonWithPetsRepository.cs" />
     <Compile Include="IQueryDefiner.cs" />
     <Compile Include="IRepositoryWithChangeNotification.cs" />
@@ -73,6 +73,7 @@
     <Compile Include="Pet.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="RavenDatabase.cs" />
     <Compile Include="RavenDbRepository.cs" />
     <Compile Include="RavenDbRepositoryWithChangeNotification.cs" />
   </ItemGroup>
