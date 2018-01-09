@@ -69,7 +69,7 @@
     <Compile Include="IRepositoryWithChangeNotification.cs" />
     <Compile Include="Person.cs" />
     <Compile Include="PersonWithPetsAndAge.cs" />
-    <Compile Include="PersonWithPetsRepositoryWithChangeNotification.cs" />
+    <Compile Include="PersonWithPetsRepository.cs" />
     <Compile Include="Pet.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
