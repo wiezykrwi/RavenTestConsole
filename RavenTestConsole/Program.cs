@@ -1,11 +1,14 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Data.SqlClient;
 using System.Linq;
 using System.Linq.Expressions;
+using System.Security.Cryptography.X509Certificates;
 using System.Threading.Tasks;
 using Raven.Client;
 using Raven.Client.Documents;
+using Raven.Client.Documents.Changes;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Linq;
 using Raven.Client.Documents.Operations.Indexes;
@@ -35,16 +38,20 @@ namespace RavenTestConsole
                 session.SaveChanges();
             }
 
-            var query = new QueryPersonWithPetsYoungerThan(database);
+            var repo = new PersonWithPetsRepository(database);
 
-            query.DefineQuery();
-
-            query.Prepare(age: 5);
-
-            var result = query.Execute().Result;
+            repo.DefineIndex();
+            repo.AddIndexChangeHandler(() =>
+            {
+                var bla = "refresh";
+            });
+           var result = repo.GetPersonWithPetsYoungerThan(age: 3);
+         
+   
+            Console.ReadLine();
         }
 
-        class QueryPersonWithPetsYoungerThan : RavenDbQuery<Person, PersonWithPetsAndAge>, IGetPersonWithPetsYoungerThan
+        class PersonWithPetsRepository : RavenDbRepository<Person, PersonWithPetsAndAge>, IPersonWithPetsRepository
         {
             public override Expression<Func<IEnumerable<Person>, IEnumerable>> Index()
             {
@@ -52,38 +59,66 @@ namespace RavenTestConsole
                     let pet = LoadDocument<Pet>(person.Pet)
                     select new PersonWithPetsAndAge {PersonName = person.Name, PetName = pet.Name, PetAge = pet.Age};
             }
-
-            public void Prepare(int age)
+            public PersonWithPetsRepository(IRavenDatabase db) : base(db)
             {
+            }
+
+            public Task<IReadOnlyCollection<PersonWithPetsAndAge>> GetPersonWithPetsYoungerThan(int age)
+            {
+                
                 Where(x => x.PetAge < age);
-            }
-
-            public QueryPersonWithPetsYoungerThan(IRavenDatabase db) : base(db)
-            {
+                return Execute();
             }
         }
 
-        internal interface IGetPersonWithPetsYoungerThan : IQuery<PersonWithPetsAndAge>
+        internal interface IPersonWithPetsRepository : IRepository
         {
-            void Prepare(int age);
+            Task<IReadOnlyCollection<PersonWithPetsAndAge>> GetPersonWithPetsYoungerThan(int age);
         }
 
-
-        public abstract class RavenDbQuery<TAggregate, TResult> :
+      
+        public abstract class RavenDbRepository<TAggregate, TResult> :
             AbstractCommonApiForIndexes,
             IQueryDefiner,
-            IQuery<TResult>
+            IRepository
         {
+            private class IndexObserver : IObserver<IndexChange>
+            {
+                private readonly Action<IndexChange> _onNext;
+
+                public IndexObserver(Action<IndexChange> onNext)
+                {
+                    _onNext = onNext;
+                }
+
+                public void OnCompleted()
+                {
+                   
+                }
+
+                public void OnError(Exception error)
+                {
+                   
+                }
+
+                public void OnNext(IndexChange value)
+                {
+                    _onNext(value);
+                }
+            }
+
             private readonly IRavenDatabase _db;
 
-            protected RavenDbQuery(IRavenDatabase db)
+            protected RavenDbRepository(IRavenDatabase db)
             {
                 _db = db;
+                _indexChangeHandlers = new List<Action>();
             }
 
             private readonly List<Expression<Func<TResult, bool>>> _wheres = new List<Expression<Func<TResult, bool>>>();
+            private readonly List<Action> _indexChangeHandlers;
 
-            public void DefineQuery()
+            public void DefineIndex()
             {
                 var builder = new IndexDefinitionBuilder<TAggregate>();
 
@@ -93,7 +128,20 @@ namespace RavenTestConsole
                 indexDefinition.Name = IndexName;
                
                 _db.Store.Maintenance.Send(new PutIndexesOperation(indexDefinition));
+                _db.Store.Changes().ForIndex(indexDefinition.Name).Subscribe(new IndexObserver(OnChange));
+            }
 
+            public void AddIndexChangeHandler(Action onChange)
+            {
+                _indexChangeHandlers.Add(onChange);
+            }
+
+            private void OnChange(IndexChange o)
+            {
+                foreach (var h in _indexChangeHandlers)
+                {
+                    h();
+                }
             }
 
             public string IndexName => GetType().FullName;
@@ -105,11 +153,14 @@ namespace RavenTestConsole
                 _wheres.Add(predicate);
             }
 
-            public async Task<IReadOnlyCollection<TResult>> Execute()
+            
+            protected async Task<IReadOnlyCollection<TResult>> Execute()
             {
                 using (var session = _db.GetSession())
                 {
+
                     IRavenQueryable<TResult> q = session.Query<TResult>(IndexName);
+
                     foreach (var where in _wheres)
                     {
                         q = q.Where(where);
@@ -122,16 +173,15 @@ namespace RavenTestConsole
             }
         }
 
+        public interface IRepository
+        {
+            void AddIndexChangeHandler(Action onChange);
+        }
         public interface IQueryDefiner
         {
-            void DefineQuery();
+            void DefineIndex();
         }
-
-        public interface IQuery<TResult>
-        {
-            Task<IReadOnlyCollection<TResult>> Execute();
-        }
-
+        
         class Person
         {
             public string Name { get; set; }
