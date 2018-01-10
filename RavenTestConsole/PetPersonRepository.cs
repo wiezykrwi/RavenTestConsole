@@ -5,6 +5,8 @@ using System.Linq;
 using System.Linq.Expressions;
 using System.Threading.Tasks;
 
+using Raven.Client.Documents.Linq;
+
 namespace RavenTestConsole
 {
 	public class PetPersonRepository : RavenDbRepository<PetPerson, PetPerson, PetPersonIndex>
@@ -23,7 +25,17 @@ namespace RavenTestConsole
 				{
 					Name = person.Name,
 					PetName = pet.Name,
-					PetAge = pet.Age
+					PetAge = pet.Age,
+
+					PetNames = (from petId2 in person.Pets
+						        let pet2 = LoadDocument<Pet>(petId2)
+								select new { pet2.Name }).ToArray(),
+
+					Pet = new
+					{
+						Name = pet.Name,
+						Age = pet.Age
+					}
 				};
 		}
 
@@ -32,9 +44,19 @@ namespace RavenTestConsole
 			return Execute(x => x.Name == name);
 		}
 
+		public Task<IReadOnlyCollection<PetPerson>> GetSuggestionsByName(string name)
+		{
+			return Execute(x => x.Name == name);
+		}
+
 		public Task<IReadOnlyCollection<PetPerson>> GetByPetName(string name)
 		{
 			return Execute(x => x.PetName == name);
+		}
+
+		public Task<IReadOnlyCollection<PetPerson>> GetByPetName2(string name)
+		{
+			return Execute(x => x.PetNames.ContainsAny(new []{ "Pastis", "Diggles" }));
 		}
 	}
 
@@ -42,6 +64,8 @@ namespace RavenTestConsole
 	{
 		public string Name { get; set; }
 		public string PetName { get; set; }
+		public string[] PetNames { get; set; }
 		public int PetAge { get; set; }
+		public Pet Pet { get; set; }
 	}
 }

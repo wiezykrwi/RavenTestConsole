@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Linq;
+using System.Threading;
 
 namespace RavenTestConsole
 {
@@ -36,21 +37,22 @@ namespace RavenTestConsole
 			}
 
 			var repo = new PersonWithPetsRepository(database);
+			repo.DefineIndex();
+			var changeRepo = new PersonRepositoryWithChangeNotification(database);
+			changeRepo.DefineIndex();
+			var petrepo = new PetPersonRepository(database);
+			petrepo.DefineIndex();
 
-			var indexDefiner = repo as IQueryDefiner;
-
-			indexDefiner.DefineIndex();
+			Thread.Sleep(1000);
 
 			var test = repo as IPersonWithPetsRepository;
 			
 			var result = test.GetPersonWithPetsYoungerThan(age: 3);
 			Console.WriteLine($"{result.Result.Count} with pets younger than 3");
 
-			var results = repo.GetByName2("Jim");
-			Console.WriteLine($"Jim heeft {results.Result.PetName} resultaten");
+			var results = repo.GetSuggestionsByName("Jim");
+			Console.WriteLine($"Jim heeft {results.Result.Count} resultaten");
 
-			var changeRepo = new PersonRepositoryWithChangeNotification(database);
-			changeRepo.DefineIndex();
 			changeRepo.AddIndexChangeHandler(() =>
 			{
 				Console.WriteLine("Person updated");
@@ -64,14 +66,11 @@ namespace RavenTestConsole
 			var temp2 = personResult2.Result.Any() ? "" : "not";
 			Console.WriteLine($"person was {temp2} found");
 
-			var petrepo = new PetPersonRepository(database);
-			petrepo.DefineIndex();
-			
 			var petPerson = petrepo.GetByName("Mathia");
 			var person = petPerson.Result.First();
 			Console.WriteLine($"{person.Name} has {person.Pets.Length} pets");
 
-			petPerson = petrepo.GetByPetName("Pastis");
+			petPerson = petrepo.GetByPetName2("Pastis");
 			person = petPerson.Result.First();
 			Console.WriteLine($"Pastis is owned by {person.Name}");
 

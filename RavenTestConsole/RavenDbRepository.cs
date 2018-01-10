@@ -26,16 +26,20 @@ namespace RavenTestConsole
 
 		public virtual void DefineIndex()
 		{
-			var builder = new IndexDefinitionBuilder<TAggregate>();
+			var builder = new IndexDefinitionBuilder<TAggregate, TResult>();
 
 			builder.Map = Index();
 			builder.StoresStrings.Add(Constants.Documents.Indexing.Fields.AllFields, FieldStorage.Yes);
+
+			Suggestions(builder);
 
 			var indexDefinition = builder.ToIndexDefinition(Database.Store.Conventions);
 			indexDefinition.Name = IndexName;
 
 			Database.Store.Maintenance.Send(new PutIndexesOperation(indexDefinition));
 		}
+
+		protected abstract void Suggestions(IndexDefinitionBuilder<TAggregate, TResult> builder);
 
 		public string IndexName => GetType().FullName;
 
@@ -74,11 +78,11 @@ namespace RavenTestConsole
 		{
 			using (var session = Database.GetSession())
 			{
-				IRavenQueryable<TResult> query = session.Query<TResult>(IndexName);
+				IRavenQueryable<TResult> query = session.Query<TResult>(IndexName);	
 
 				var suggestionsQuery = predicate(query);
 
-				var result = await suggestionsQuery.ExecuteAsync();
+				var result = suggestionsQuery.Execute();
 
 				return await Task.FromResult(result);
 			}
@@ -155,12 +159,13 @@ namespace RavenTestConsole
 					.Where(predicate)
 					.ProjectInto<TResult>();
 
+				var s = q.ToString();
 				var result = q.ToList();
 
 				return await Task.FromResult(result);
 			}
 		}
-
+		
 		protected async Task<IReadOnlyCollection<TResult>> ExecuteQuery(Func<IRavenQueryable<TQuery>, IRavenQueryable<TQuery>> predicate)
 		{
 			using (var session = Database.GetSession())

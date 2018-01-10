@@ -5,11 +5,17 @@ using System.Linq;
 using System.Linq.Expressions;
 using System.Threading.Tasks;
 
+using Raven.Client.Documents.Indexes;
+
 namespace RavenTestConsole
 {
 	public class PersonRepositoryWithChangeNotification : RavenDbRepositoryWithChangeNotification<Person, Person>
 	{
 		public PersonRepositoryWithChangeNotification(IRavenDatabase database) : base(database)
+		{
+		}
+
+		protected override void Suggestions(IndexDefinitionBuilder<Person, Person> builder)
 		{
 		}
 

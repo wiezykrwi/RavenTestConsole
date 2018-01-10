@@ -6,17 +6,23 @@ using System.Linq.Expressions;
 using System.Threading.Tasks;
 
 using Raven.Client.Documents;
+using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Linq;
 
 namespace RavenTestConsole
 {
 	public class PersonWithPetsRepository : RavenDbRepository<Person, PersonWithPetsAndAge>, IPersonWithPetsRepository
 	{
+		protected override void Suggestions(IndexDefinitionBuilder<Person, PersonWithPetsAndAge> builder)
+		{
+			builder.SuggestionsOptions.Add(x => x.PersonName);
+		}
+
 		public override Expression<Func<IEnumerable<Person>, IEnumerable>> Index()
 		{
 			return people => from person in people
 				let pet = LoadDocument<Pet>(person.Pet)
-				select new PersonWithPetsAndAge { PersonName = person.Name, PetName = pet.Name, PetAge = pet.Age };
+				select new { PersonName = person.Name, PetName = pet.Name, PetAge = pet.Age };
 		}
 
 		public PersonWithPetsRepository(IRavenDatabase database) : base(database)
@@ -27,12 +33,7 @@ namespace RavenTestConsole
 		{
 			return Execute(x => x.PetAge < age);
 		}
-
-		public Task<IReadOnlyCollection<PersonWithPetsAndAge>> GetByName(string name)
-		{
-			return Execute(x => x.PersonName.Contains(name));
-		}
-
+		
 		public Task<PersonWithPetsAndAge> GetByName2(string name)
 		{
 			using (var reefer = Query())
@@ -47,7 +48,9 @@ namespace RavenTestConsole
 				//.Where(x => x.PersonName == name)
 				.SuggestUsing(builder => builder.ByField(x => x.PersonName, name)));
 
-			return await Task.FromResult(results[""].Suggestions);
+			var suggestions = results["PersonName"].Suggestions;
+
+			return await Task.FromResult(suggestions);
 		}
 
 		public Task<IReadOnlyCollection<PersonWithPetsAndAge>> GetPersonWithPetsYoungerThanQuerySearchName(string name, int age)
