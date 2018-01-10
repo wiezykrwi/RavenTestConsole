@@ -68,6 +68,7 @@
     <Compile Include="IQueryDefiner.cs" />
     <Compile Include="IRepositoryWithChangeNotification.cs" />
     <Compile Include="Person.cs" />
+    <Compile Include="PersonRepositoryWithChangeNotification.cs" />
     <Compile Include="PersonWithPetsAndAge.cs" />
     <Compile Include="PersonWithPetsRepository.cs" />
     <Compile Include="Pet.cs" />
