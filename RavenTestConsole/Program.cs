@@ -10,8 +10,13 @@ namespace RavenTestConsole
 		{
 			var fluffy = new Pet { Name = "Fluffy", Age = 2 };
 			var john = new Person { Name = "John", Pet = "Pet/2" };
+			var spookje = new Pet { Name = "Spookje", Age = 7 };
 			var pastis = new Pet { Name = "Pastis", Age = 4 };
-			var mathia = new Person { Name = "Mathia", Pet = "Pet/1" };
+			var diggles = new Pet { Name = "Diggles", Age = 2 };
+			var mathia = new PetPerson { Name = "Mathia", Pets = new []{ "Pet/1", "Pet/5", "Pet/6" } };
+			var jim = new Person { Name = "Jim", Pet = "Pet/3"};
+			var jimmy = new Pet { Name = "Jimmy" };
+			var jimmy2 = new Pet { Name = "Jimmy2" };
 
 			var database = new RavenDatabase();
 
@@ -20,7 +25,12 @@ namespace RavenTestConsole
 				session.Store(pastis, "Pet/1");
 				session.Store(fluffy, "Pet/2");
 				session.Store(john, "Person/1");
-				session.Store(mathia, "Person/2");
+				session.Store(mathia, "Person/4");
+				session.Store(jim, "Person/3");
+				session.Store(jimmy, "Pet/3");
+				session.Store(jimmy2, "Pet/4");
+				session.Store(spookje, "Pet/5");
+				session.Store(diggles, "Pet/6");
 
 				session.SaveChanges();
 			}
@@ -30,9 +40,14 @@ namespace RavenTestConsole
 			var indexDefiner = repo as IQueryDefiner;
 
 			indexDefiner.DefineIndex();
+
+			var test = repo as IPersonWithPetsRepository;
 			
-			var result = repo.GetPersonWithPetsYoungerThan(age: 3);
+			var result = test.GetPersonWithPetsYoungerThan(age: 3);
 			Console.WriteLine($"{result.Result.Count} with pets younger than 3");
+
+			var results = repo.GetByName2("Jim");
+			Console.WriteLine($"Jim heeft {results.Result.PetName} resultaten");
 
 			var changeRepo = new PersonRepositoryWithChangeNotification(database);
 			changeRepo.DefineIndex();
@@ -48,6 +63,17 @@ namespace RavenTestConsole
 			var personResult2 = changeRepo.PeopleWithNameThatStartsWith("Mat");
 			var temp2 = personResult2.Result.Any() ? "" : "not";
 			Console.WriteLine($"person was {temp2} found");
+
+			var petrepo = new PetPersonRepository(database);
+			petrepo.DefineIndex();
+			
+			var petPerson = petrepo.GetByName("Mathia");
+			var person = petPerson.Result.First();
+			Console.WriteLine($"{person.Name} has {person.Pets.Length} pets");
+
+			petPerson = petrepo.GetByPetName("Pastis");
+			person = petPerson.Result.First();
+			Console.WriteLine($"Pastis is owned by {person.Name}");
 
 			Console.ReadLine();
 		}

@@ -72,6 +72,7 @@
     <Compile Include="PersonWithPetsAndAge.cs" />
     <Compile Include="PersonWithPetsRepository.cs" />
     <Compile Include="Pet.cs" />
+    <Compile Include="PetPersonRepository.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="RavenDatabase.cs" />
