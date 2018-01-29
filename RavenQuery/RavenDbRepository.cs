@@ -13,8 +13,45 @@ using Raven.Client.Documents.Operations.Indexes;
 using Raven.Client.Documents.Queries.Suggestions;
 using Raven.Client.Documents.Session;
 
-namespace RavenTestConsole
+namespace RavenQuery
 {
+	public abstract class CustomRavenDbRepository<TResult, TIndex> : AbstractCommonApiForIndexes where TIndex : AbstractIndexCreationTask, new()
+	{
+		protected readonly IRavenDatabase Database;
+
+		protected CustomRavenDbRepository(IRavenDatabase database)
+		{
+			Database = database;
+		}
+
+		protected async Task<IReadOnlyCollection<TResult>> Execute(Expression<Func<TResult, bool>> predicate)
+		{
+			using (var session = Database.GetSession())
+			{
+				IRavenQueryable<TResult> q = session.Query<TResult, TIndex>()
+					.Where(predicate);
+
+				var result = q.ToList();
+
+				return await Task.FromResult(result);
+			}
+		}
+
+		protected async Task<IReadOnlyCollection<T>> ExecuteMapped<T>(Expression<Func<TResult, bool>> predicate)
+		{
+			using (var session = Database.GetSession())
+			{
+				IRavenQueryable<T> q = session.Query<TResult, TIndex>()
+					.Where(predicate)
+					.ProjectInto<T>();
+
+				var result = q.ToList();
+
+				return await Task.FromResult(result);
+			}
+		}
+	}
+
 	public abstract class RavenDbRepository<TAggregate, TResult> : AbstractCommonApiForIndexes, IQueryDefiner
 	{
 		protected readonly IRavenDatabase Database;
@@ -31,6 +68,7 @@ namespace RavenTestConsole
 			builder.Map = Index();
 			builder.StoresStrings.Add(Constants.Documents.Indexing.Fields.AllFields, FieldStorage.Yes);
 
+			IndexFields(builder.Indexes);
 			Suggestions(builder);
 
 			var indexDefinition = builder.ToIndexDefinition(Database.Store.Conventions);
@@ -39,7 +77,13 @@ namespace RavenTestConsole
 			Database.Store.Maintenance.Send(new PutIndexesOperation(indexDefinition));
 		}
 
-		protected abstract void Suggestions(IndexDefinitionBuilder<TAggregate, TResult> builder);
+		protected virtual void IndexFields(IDictionary<Expression<Func<TResult, object>>, FieldIndexing> builder)
+		{
+		}
+
+		protected virtual void Suggestions(IndexDefinitionBuilder<TAggregate, TResult> builder)
+		{
+		}
 
 		public string IndexName => GetType().FullName;
 
@@ -59,14 +103,14 @@ namespace RavenTestConsole
 			}
 		}
 
-		protected async Task<IReadOnlyCollection<TResult>> ExecuteQuery(Func<IRavenQueryable<TResult>, IRavenQueryable<TResult>> predicate)
+		protected async Task<IReadOnlyCollection<TResult>> ExecuteQuery(Func<IRavenQueryable<TResult>, IRavenQueryable<TResult>> queryFunc)
 		{
 			using (var session = Database.GetSession())
 			{
 				IRavenQueryable<TResult> query = session.Query<TResult>(IndexName)
 					.ProjectInto<TResult>();
 
-				query = predicate(query);
+				query = queryFunc(query);
 
 				var result = query.ToList();
 

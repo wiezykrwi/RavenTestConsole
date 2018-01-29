@@ -1,4 +1,4 @@
-﻿namespace RavenTestConsole
+﻿namespace RavenQuery
 {
 	public interface IQueryDefiner
 	{

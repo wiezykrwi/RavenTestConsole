@@ -7,6 +7,10 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RavenTestConsole", "RavenTe
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TryToCrash", "TryToCrash\TryToCrash.csproj", "{F96E3103-86D1-4A08-9D11-A0A3FD6F70F8}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RavenQuery", "RavenQuery\RavenQuery.csproj", "{725E1B16-259F-44F7-9985-9F4C15B250B2}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Multimap", "Multimap\Multimap.csproj", "{A4B09C46-3451-4B72-AB0C-0FF47EABFAB9}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -21,6 +25,14 @@ Global
 		{F96E3103-86D1-4A08-9D11-A0A3FD6F70F8}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{F96E3103-86D1-4A08-9D11-A0A3FD6F70F8}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{F96E3103-86D1-4A08-9D11-A0A3FD6F70F8}.Release|Any CPU.Build.0 = Release|Any CPU
+		{725E1B16-259F-44F7-9985-9F4C15B250B2}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{725E1B16-259F-44F7-9985-9F4C15B250B2}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{725E1B16-259F-44F7-9985-9F4C15B250B2}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{725E1B16-259F-44F7-9985-9F4C15B250B2}.Release|Any CPU.Build.0 = Release|Any CPU
+		{A4B09C46-3451-4B72-AB0C-0FF47EABFAB9}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{A4B09C46-3451-4B72-AB0C-0FF47EABFAB9}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{A4B09C46-3451-4B72-AB0C-0FF47EABFAB9}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{A4B09C46-3451-4B72-AB0C-0FF47EABFAB9}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

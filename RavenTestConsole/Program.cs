@@ -2,6 +2,13 @@
 using System.Linq;
 using System.Threading;
 
+using Raven.Client.Documents;
+using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Operations.Indexes;
+using Raven.Client.Documents.Queries.Suggestions;
+
+using RavenQuery;
+
 namespace RavenTestConsole
 {
 	public static class Program
@@ -19,7 +26,7 @@ namespace RavenTestConsole
 			var jimmy = new Pet { Name = "Jimmy" };
 			var jimmy2 = new Pet { Name = "Jimmy2" };
 
-			var database = new RavenDatabase();
+			var database = new RavenDatabase("zoo");
 
 			using (var session = database.GetSession())
 			{
@@ -35,6 +42,37 @@ namespace RavenTestConsole
 
 				session.SaveChanges();
 			}
+
+			//var builder = new IndexDefinitionBuilder<Person, PersonWithPetsAndAge>("PersonWithPetsAndAge");
+			//builder.Map = people => from p in people select new { PersonName = p.Name };
+			////builder.Indexes.Add(x => x.PersonName, FieldIndexing.Search);
+			//builder.SuggestionsOptions.Add(x => x.PersonName);
+
+			//database.Store.Maintenance.Send(new PutIndexesOperation(builder.ToIndexDefinition(database.Store.Conventions)));
+
+
+			//var sess = database.GetSession();
+			//var suggestionQuery = sess.Query<PersonWithPetsAndAge>("PersonWithPetsAndAge")
+			//	.Customize(customize => customize.WaitForNonStaleResults())
+			//	.SuggestUsing(b => b.ByField(x => x.PersonName, "j").WithOptions(new SuggestionOptions
+			//	{
+			//		Accuracy = 0.4f,
+			//		Distance = StringDistanceTypes.JaroWinkler
+			//	}));
+			//var res = suggestionQuery.Execute();
+
+			//foreach (var suggestion in res["PersonName"].Suggestions)
+			//{
+			//	Console.WriteLine($"did you mean: {suggestion}");
+			//}
+
+			//Console.ReadKey(true);
+
+			//return;
+
+			var searchRepo = new SearchRepo(database);
+			searchRepo.DefineIndex();
+			var res = searchRepo.Test("ji*").Result;
 
 			var repo = new PersonWithPetsRepository(database);
 			repo.DefineIndex();
@@ -53,10 +91,7 @@ namespace RavenTestConsole
 			var results = repo.GetSuggestionsByName("Jim");
 			Console.WriteLine($"Jim heeft {results.Result.Count} resultaten");
 
-			changeRepo.AddIndexChangeHandler(() =>
-			{
-				Console.WriteLine("Person updated");
-			});
+			changeRepo.AddIndexChangeHandler(Console.WriteLine);
 
 			var personResult = changeRepo.PeopleWithName("Mathia");
 			var temp = personResult.Result.Any() ? "" : "not";
@@ -70,9 +105,9 @@ namespace RavenTestConsole
 			var person = petPerson.Result.First();
 			Console.WriteLine($"{person.Name} has {person.Pets.Length} pets");
 
-			petPerson = petrepo.GetByPetName2("Pastis");
-			person = petPerson.Result.First();
-			Console.WriteLine($"Pastis is owned by {person.Name}");
+			//petPerson = petrepo.GetByPetName2("Pastis");
+			//person = petPerson.Result.First();
+			//Console.WriteLine($"Pastis is owned by {person.Name}");
 
 			Console.ReadLine();
 		}

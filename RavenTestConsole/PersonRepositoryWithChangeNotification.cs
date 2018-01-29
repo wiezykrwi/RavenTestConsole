@@ -7,6 +7,8 @@ using System.Threading.Tasks;
 
 using Raven.Client.Documents.Indexes;
 
+using RavenQuery;
+
 namespace RavenTestConsole
 {
 	public class PersonRepositoryWithChangeNotification : RavenDbRepositoryWithChangeNotification<Person, Person>

@@ -1,18 +1,18 @@
 ﻿using Raven.Client.Documents;
 using Raven.Client.Documents.Session;
 
-namespace RavenTestConsole
+namespace RavenQuery
 {
 	public class RavenDatabase : IRavenDatabase
 	{
 		public IDocumentStore Store { get; private set; }
 
-		public RavenDatabase()
+		public RavenDatabase(string database)
 		{
 			Store = new DocumentStore
 			{
 				Urls = new[] {"http://localhost:8080/"},
-				Database = "zoo"    
+				Database = database    
 			};
 			Store.Initialize();
 		}

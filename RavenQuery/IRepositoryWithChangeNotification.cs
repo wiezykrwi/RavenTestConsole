@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace RavenTestConsole
+namespace RavenQuery
 {
 	public interface IRepositoryWithChangeNotification
 	{

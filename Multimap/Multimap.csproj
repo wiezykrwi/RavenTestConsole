@@ -4,10 +4,10 @@
   <PropertyGroup>
     <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
     <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
-    <ProjectGuid>{28AB3FA9-0C1F-4673-90C4-4537A81908FB}</ProjectGuid>
+    <ProjectGuid>{A4B09C46-3451-4B72-AB0C-0FF47EABFAB9}</ProjectGuid>
     <OutputType>Exe</OutputType>
-    <RootNamespace>RavenTestConsole</RootNamespace>
-    <AssemblyName>RavenTestConsole</AssemblyName>
+    <RootNamespace>Multimap</RootNamespace>
+    <AssemblyName>Multimap</AssemblyName>
     <TargetFrameworkVersion>v4.6.1</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
     <AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>
@@ -63,16 +63,9 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="IPersonWithPetsRepository.cs" />
-    <Compile Include="Person.cs" />
-    <Compile Include="PersonRepositoryWithChangeNotification.cs" />
-    <Compile Include="PersonWithPetsAndAge.cs" />
-    <Compile Include="PersonWithPetsRepository.cs" />
-    <Compile Include="Pet.cs" />
-    <Compile Include="PetPersonRepository.cs" />
+    <Compile Include="MessageRepository.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="SearchRepo.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="App.config" />

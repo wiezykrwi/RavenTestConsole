@@ -1,8 +1,9 @@
 ﻿using System;
+
 using Raven.Client.Documents;
 using Raven.Client.Documents.Session;
 
-namespace RavenTestConsole
+namespace RavenQuery
 {
     public interface IRavenDatabase : IDisposable
     {
